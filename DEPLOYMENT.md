@@ -52,15 +52,15 @@ GRANT ALL PRIVILEGES ON DATABASE skybreaker TO skybreaker_user;
 ## Шаг 3: Клонирование проекта
 
 ```bash
-# Создать директорию для проекта
-cd /var/www
-sudo mkdir -p sky-breaker
-sudo chown $USER:$USER sky-breaker
-cd sky-breaker
+# Перейти в домашнюю директорию
+cd ~
 
 # Клонировать репозиторий
-git clone https://github.com/ваш-username/sky-breaker.git .
+git clone https://github.com/dagniden/sky-breaker.git
+cd sky-breaker
 ```
+
+**Примечание:** Проект будет находиться в `~/sky-breaker` (например, `/home/username/sky-breaker`)
 
 ## Шаг 4: Настройка окружения
 
@@ -93,8 +93,8 @@ python3 -c "from django.core.management.utils import get_random_secret_key; prin
 ## Шаг 5: Установка зависимостей и настройка Django
 
 ```bash
-# Установить зависимости через Poetry
-poetry install --no-dev
+# Установить зависимости через Poetry (без dev-зависимостей)
+poetry install --without dev
 
 # Применить миграции
 poetry run python manage.py migrate
@@ -116,22 +116,24 @@ poetry run python manage.py createsuperuser
 sudo nano /etc/systemd/system/skybreaker.service
 ```
 
-Содержимое файла:
+Содержимое файла (замените `username` на ваше имя пользователя):
 ```ini
 [Unit]
 Description=Sky Breaker Gunicorn daemon
 After=network.target
 
 [Service]
-User=ваш_пользователь
+User=username
 Group=www-data
-WorkingDirectory=/var/www/sky-breaker
-Environment="PATH=/var/www/sky-breaker/.venv/bin"
-ExecStart=/home/ваш_пользователь/.local/bin/poetry run gunicorn --workers 3 --bind unix:/var/www/sky-breaker/skybreaker.sock config.wsgi:application
+WorkingDirectory=/home/username/sky-breaker
+Environment="PATH=/home/username/sky-breaker/.venv/bin"
+ExecStart=/home/username/.local/bin/poetry run gunicorn --workers 3 --bind unix:/home/username/sky-breaker/skybreaker.sock config.wsgi:application
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+**Важно:** Замените `username` на ваше реальное имя пользователя (узнать можно командой `whoami`)
 
 ```bash
 # Запустить и включить сервис
@@ -149,7 +151,7 @@ sudo systemctl status skybreaker
 sudo nano /etc/nginx/sites-available/skybreaker
 ```
 
-Содержимое файла:
+Содержимое файла (замените `username` и `ваш-домен.com`):
 ```nginx
 server {
     listen 80;
@@ -158,19 +160,21 @@ server {
     location = /favicon.ico { access_log off; log_not_found off; }
 
     location /static/ {
-        alias /var/www/sky-breaker/staticfiles/;
+        alias /home/username/sky-breaker/staticfiles/;
     }
 
     location /media/ {
-        alias /var/www/sky-breaker/media/;
+        alias /home/username/sky-breaker/media/;
     }
 
     location / {
         include proxy_params;
-        proxy_pass http://unix:/var/www/sky-breaker/skybreaker.sock;
+        proxy_pass http://unix:/home/username/sky-breaker/skybreaker.sock;
     }
 }
 ```
+
+**Важно:** Замените `username` на ваше имя пользователя
 
 ```bash
 # Активировать конфигурацию
@@ -200,13 +204,13 @@ sudo certbot --nginx -d ваш-домен.com -d www.ваш-домен.com
 Когда нужно обновить код на сервере:
 
 ```bash
-cd /var/www/sky-breaker
+cd ~/sky-breaker
 
 # Получить последние изменения
 git pull origin main
 
 # Обновить зависимости (если изменились)
-poetry install --no-dev
+poetry install --without dev
 
 # Применить новые миграции (если есть)
 poetry run python manage.py migrate
