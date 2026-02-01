@@ -93,8 +93,8 @@ python3 -c "from django.core.management.utils import get_random_secret_key; prin
 ## Шаг 5: Установка зависимостей и настройка Django
 
 ```bash
-# Установить зависимости через Poetry
-poetry install --no-dev
+# Установить зависимости через Poetry (без dev-зависимостей)
+poetry install --without dev
 
 # Применить миграции
 poetry run python manage.py migrate
@@ -210,7 +210,7 @@ cd ~/sky-breaker
 git pull origin main
 
 # Обновить зависимости (если изменились)
-poetry install --no-dev
+poetry install --without dev
 
 # Применить новые миграции (если есть)
 poetry run python manage.py migrate
