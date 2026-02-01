@@ -1,0 +1,46 @@
+{% extends 'sleepy/base.html' %}
+
+{% block title %}День {{ article.day_number }}: {{ article.title }} - Sleepy{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{% url 'sleepy:article_list' %}" style="color: #4299e1; text-decoration: none;">
+        ← Вернуться к списку
+    </a>
+</div>
+
+<article>
+    <header style="margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
+        <h1 style="margin-bottom: 10px;">День {{ article.day_number }}: {{ article.title }}</h1>
+        {% if article.tags %}
+            <p style="color: #718096; font-size: 0.9em;">
+                Теги: {{ article.tags }}
+            </p>
+        {% endif %}
+        <p style="color: #a0aec0; font-size: 0.85em; margin-top: 10px;">
+            Обновлено: {{ article.updated_at|date:"d.m.Y H:i" }}
+        </p>
+    </header>
+
+    <div class="article-content">
+        {{ html_content|safe }}
+    </div>
+</article>
+
+<nav style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; display: flex; justify-content: space-between;">
+    <div>
+        {% if prev_article %}
+            <a href="{{ prev_article.get_absolute_url }}" style="color: #4299e1; text-decoration: none;">
+                ← День {{ prev_article.day_number }}: {{ prev_article.title }}
+            </a>
+        {% endif %}
+    </div>
+    <div style="text-align: right;">
+        {% if next_article %}
+            <a href="{{ next_article.get_absolute_url }}" style="color: #4299e1; text-decoration: none;">
+                День {{ next_article.day_number }}: {{ next_article.title }} →
+            </a>
+        {% endif %}
+    </div>
+</nav>
+{% endblock %}
