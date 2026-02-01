@@ -3,7 +3,7 @@
 ## Предварительные требования
 
 На сервере должны быть установлены:
-- Python 3.13
+- Python 3.11+ (проект совместим с Python 3.11, 3.12, 3.13)
 - PostgreSQL
 - Nginx
 - Git
@@ -15,8 +15,8 @@
 # Обновление системы
 sudo apt update && sudo apt upgrade -y
 
-# Установка Python 3.13 (если нет)
-sudo apt install python3.13 python3.13-venv python3-pip -y
+# Установка Python 3.11+ (обычно уже установлен в Debian)
+sudo apt install python3 python3-venv python3-pip -y
 
 # Установка PostgreSQL
 sudo apt install postgresql postgresql-contrib -y
@@ -46,8 +46,22 @@ ALTER ROLE skybreaker_user SET client_encoding TO 'utf8';
 ALTER ROLE skybreaker_user SET default_transaction_isolation TO 'read committed';
 ALTER ROLE skybreaker_user SET timezone TO 'UTC';
 GRANT ALL PRIVILEGES ON DATABASE skybreaker TO skybreaker_user;
+
+# Подключиться к базе данных
+\c skybreaker
+
+# Дать права на схему public (критично для миграций!)
+GRANT ALL ON SCHEMA public TO skybreaker_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO skybreaker_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO skybreaker_user;
+
+# Для PostgreSQL 15+ также установить владельца схемы
+ALTER SCHEMA public OWNER TO skybreaker_user;
+
 \q
 ```
+
+**Важно:** Без прав на схему `public` миграции Django не смогут создать таблицы!
 
 ## Шаг 3: Клонирование проекта
 
@@ -85,9 +99,13 @@ DB_HOST=localhost
 DB_PORT=5432
 ```
 
-Для генерации SECRET_KEY:
+Для генерации SECRET_KEY (после установки зависимостей):
 ```bash
-python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+# Вариант 1: Через Poetry (после poetry install)
+poetry run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+
+# Вариант 2: Без Django
+python3 -c "import secrets; print(''.join(secrets.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#\$%^&*(-_=+)') for i in range(50)))"
 ```
 
 ## Шаг 5: Установка зависимостей и настройка Django
@@ -133,9 +151,14 @@ ExecStart=/home/username/.local/bin/poetry run gunicorn --workers 3 --bind unix:
 WantedBy=multi-user.target
 ```
 
-**Важно:** Замените `username` на ваше реальное имя пользователя (узнать можно командой `whoami`)
+**Важно:**
+- Замените `username` на ваше реальное имя пользователя (узнать можно командой `whoami`)
+- ExecStart должен быть в одной строке без переносов!
 
 ```bash
+# Перезагрузить systemd после создания файла
+sudo systemctl daemon-reload
+
 # Запустить и включить сервис
 sudo systemctl start skybreaker
 sudo systemctl enable skybreaker
@@ -177,8 +200,16 @@ server {
 **Важно:** Замените `username` на ваше имя пользователя
 
 ```bash
+# Удалить старые конфигурации (если были)
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm -f /etc/nginx/sites-enabled/sky-breaker  # если есть старые
+
 # Активировать конфигурацию
 sudo ln -s /etc/nginx/sites-available/skybreaker /etc/nginx/sites-enabled/
+
+# Дать Nginx доступ к домашней директории (критично!)
+sudo usermod -a -G $(whoami) www-data
+chmod 710 ~
 
 # Проверить конфигурацию Nginx
 sudo nginx -t
@@ -186,6 +217,8 @@ sudo nginx -t
 # Перезапустить Nginx
 sudo systemctl restart nginx
 ```
+
+**Важно:** Без прав доступа к домашней директории Nginx не сможет подключиться к сокету!
 
 ## Шаг 8: Настройка SSL (опционально, но рекомендуется)
 
